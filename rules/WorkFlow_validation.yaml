@@ -1,0 +1,22 @@
+---
+name: WorkFlowValidation
+pack: kafka
+description: "Rule to trigger WorkFlowValidate usecase"
+enabled: true
+
+trigger:
+  type: "kafka.new_message"
+  parameters: {}
+
+criteria:
+  trigger.topic:
+    type: "equals"
+    pattern: "ASKVAnsible_Topic_ST2V2"
+  trigger.message:
+    type: "exists"
+    pattern: "summary"
+
+action:
+  ref: default.WorkFlowValidation
+  parameters:
+    validatedata: "{{trigger.message}}"
