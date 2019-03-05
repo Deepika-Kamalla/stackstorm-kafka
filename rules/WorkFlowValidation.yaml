@@ -1,0 +1,111 @@
+---
+version: '2.0'
+
+default.WorkFlowValidation:
+  type: direct
+  input:
+    - validatedata
+  tasks:
+    ValidateWorkflowResult:
+      # [885, 26]
+      action: core.echo
+      input:
+        message: <% $.validatedata %>
+      publish:
+        validata: <% task(ValidateWorkflowResult).result.stdout %>
+      on-success:
+        - Replace_Chars
+    Replace_Chars:
+      # [885, 128]
+      action: core.echo
+      input:
+        message: "Replacing unknown characters"
+      publish:
+        #replace:  "{{ _.validata | replace(\" u'\",\"'\") | replace('u','')}}"
+        replace:  "{{ _.validata | replace(\" u'\",\"'\") | replace(\"u'DiagnosisResult\",\"'DiagnosisResult\")}}"
+        #replace:  "{{ _.validata | replace(\" u'\",\"'\")}}"
+      on-success:
+        - Diagnose_Result
+    Diagnose_Result:
+      # [885, 230]
+      action: core.echo
+      input:
+        message: "Fetching the Diagnose Result field from the event"
+      publish:
+        #DiagnoseData: "{%set data = _.replace %}{% set nodes = [] %}{% set elem_split = data.split(',')%}{% for value in elem_split %}{% if value.split(':')[0] == \"\\{'DiagnosisResult'\" %}{% set max_val = value.split(':')[1]|length %}{{-nodes.append(value.split(':')[1])-}}{% endif %}{% endfor %}{{-nodes-}}"
+        DiagnoseData: "{%set data = _.replace %}{% set dresult = [] %}{% set elem_split = data.split(',')%}{% for value in elem_split %}{% if value.split(':')[0] == \"{'DiagnosisResult'\" %}{% set max_val = value.split(':')[1]|length %}{{-dresult.append(value.split(':')[1])-}}{% endif %}{% endfor %}{{-dresult-}}"
+        #diagnose: "{% if \"'DiagnosisResult'\" in _.replace %}{{regex_substring(_.replace,\"(.)\")}}{% endif %}"
+      on-success:
+        - final_value 
+    final_value:
+      # [885, 332]
+      action: core.echo
+      input:
+        message: "Final Value"
+      publish:
+        #final_data: "{{ _.DiagnoseData | replace('None','') | replace('[','') | replace(']','') | replace('\"','')| replace('u','') | replace(\"'\",'') }}"
+        final_data: "{{ _.DiagnoseData | replace('None[u','') | replace(']','') | replace('\"','') | replace(\"'\",'') }}"
+        #diagnose: "{% if \"'DiagnosisResult'\" in _.replace %}{{regex_substring(_.replace,\"(*)\")}}{% endif %}"
+      on-success:
+        - equipment_fan: <% EquipmentFan in $.final_data %>
+        - neighbor_down: <% NeighborDown in $.final_data %>
+        - peer_connection_alarm: <% BGPRouterDown in $.final_data %>
+        - equipment_physical_port: <% EquipmentPhysicalPort in $.final_data %>
+        - communication_alarm_uc: <% TimingReference in $.final_data %>
+        - equipment_tdm: <% TDMEquipmentDown in $.final_data %>
+        - dry_contact: <% DryContactAlarm in $.final_data %>
+        - lsp_alarm: <% PathAlarmsLSP in $.final_data %> 
+        - power_supply: <% PowerSupply in $.final_data %>
+        - linkdown_alarm: <% TransportLinkDownAlarm in $.final_data %>
+    neighbor_down:
+      # [365, 434]
+      action: default.NeighborDown
+      input:
+        neighbordata: "{{_.validata}}"
+    equipment_fan:
+      # [105, 434]
+      action: default.Equipment_fan_usecase
+      input:
+        fandata: "{{_.validata}}"
+    peer_connection_alarm:
+      # [625, 434]
+      action: default.BGP_Usecase_FinalFLow
+      input:
+        readkafka: "{{_.validata}}"
+    equipment_physical_port:
+      # [885, 434]
+      action: default.EquipmentPhysicalPort
+      input:
+        phyportdata: "{{_.validata}}"
+    communication_alarm_uc:
+      # [1145, 434]
+      action: default.communication_alarm
+      input:
+        commdata: "{{_.validata}}"
+    equipment_tdm:
+      # [1405, 434]
+      action: default.Alarm_TDMequipment
+      input:
+        tdmequipment: "{{_.validata}}"
+    dry_contact:
+      # [1665, 434]
+      action: default.DryContactAlarm
+      input:
+        drydata: "{{_.validata}}"
+    lsp_alarm:
+      # [1665, 434]
+      action: default.LSP_ALARMS
+      input:
+        lspdata: "{{_.validata}}"
+    power_supply:
+      # [1665, 434]
+      action: default.Equipment_Power_Supply
+      input:
+        powersupply: "{{_.validata}}"
+    linkdown_alarm:
+      # [1665, 434]
+      action: default.TransportLinkDownAlarm
+      input:
+        translinkdowndata: "{{_.validata}}"
+    
+    
