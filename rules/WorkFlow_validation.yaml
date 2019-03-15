@@ -1,0 +1,22 @@
+---
+name: WorkFlowValidation
+pack: kafka
+description: "Rule to trigger WorkFlowValidate usecase"
+enabled: true
+
+trigger:
+  type: "kafka.new_message"
+  parameters: {}
+
+criteria:
+  trigger.topic:
+    type: "equals"
+    pattern: "test"
+  trigger.message:
+    type: "contains"
+    pattern: "hello"
+
+action:
+  ref: core.echo
+  parameters:
+    message: "{{trigger.message}}"
