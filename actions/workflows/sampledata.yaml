@@ -1,0 +1,17 @@
+---
+version: '2.0'
+
+kafka.sampledata:
+  tasks:
+    task1:
+      # [296, 140]
+      action: core.local
+      input:
+        cmd: "date"
+      on-success:
+        - task2
+    task2:
+      # [271, 276]
+      action: core.echo
+      input:
+        message: "hello from kubernets"
