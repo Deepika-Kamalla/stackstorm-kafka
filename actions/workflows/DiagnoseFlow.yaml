@@ -1,7 +1,7 @@
 ---
 version: '2.0'
 
-default.DiagnoseFlow:
+kafka.DiagnoseFlow:
   type: direct
   input:
     - diagnosedata
