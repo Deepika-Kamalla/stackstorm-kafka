@@ -1,0 +1,17 @@
+---
+version: '2.0'
+
+default.sampletest:
+  tasks:
+    task1:
+      # [194, 123]
+      action: core.echo
+      input:
+        message: "hello kubernets"
+      on-success:
+        - task2
+    task2:
+      # [198, 269]
+      action: core.local
+      input:
+        cmd: "date"
