@@ -2,7 +2,7 @@
 name: Orquesta_DiagnoseModule
 pack: kafka
 description: "Rule to trigger Orquesta_DiagnoseModule usecase"
-enabled: false
+enabled: true
 
 trigger:
   type: "kafka.new_message"
