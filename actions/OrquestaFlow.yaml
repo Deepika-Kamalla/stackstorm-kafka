@@ -1,0 +1,11 @@
+---
+name: OrquestaDiagnose
+pack: email
+description: Workflow for Diagnose Module
+runner_type: orquesta
+entry_point: workflows/OrquestaDiagnose.yaml
+enabled: true
+parameters:
+  diagnosedata:
+    required: true
+    type: string
