@@ -1,0 +1,11 @@
+---
+name: Orquesta_WorkFlowValidation
+pack: email
+description: Workflow for Validation
+runner_type: orquesta
+entry_point: workflows/Orquesta_WorkFlowValidation.yaml
+enabled: true
+parameters:
+  validatedata:
+    required: true
+    type: string

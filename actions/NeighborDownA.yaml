@@ -1,0 +1,11 @@
+---
+name: NeighborDown
+pack: email
+description: Workflow for NeighborDown usecase
+runner_type: orquesta
+entry_point: workflows/NeighborDown.yaml
+enabled: true
+parameters:
+  neighbordata:
+    required: true
+    type: string
