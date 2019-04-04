@@ -2,7 +2,7 @@
 name: Orquesta_DiagnoseModule
 pack: kafka
 description: "Rule to trigger Orquesta_DiagnoseModule usecase"
-enabled: false
+enabled: true
 
 trigger:
   type: "kafka.new_message"
@@ -17,7 +17,7 @@ criteria:
     pattern: "summary"
 
 action:
-  ref: email.OrquestaDiagnose
+  ref: kafka.OrquestaDiagnose
   parameters:
     #cmd: "echo {{ trigger.message.attributes[0].attributeName }}: {{ trigger.message.attributes[0].attributeValue }}"
     diagnosedata: "{{trigger.message}}"
