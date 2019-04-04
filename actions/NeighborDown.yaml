@@ -1,6 +1,6 @@
 ---
 name: NeighborDown
-pack: email
+pack: kafka
 description: Workflow for NeighborDown usecase
 runner_type: orquesta
 entry_point: workflows/NeighborDown.yaml
