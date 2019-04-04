@@ -1,0 +1,87 @@
+version: 1.0
+
+description: Workflow for NeighborDown Usecase
+
+input:
+  - neighbordata
+  - mnode: ["PHNXAZ051HW-MCDLAGGA451","PHNXAZ051HW-MCDLAGGA452","PHNXAZ051HW-MCDLAGGA453","PHNXAZ051HW-MCDLAGGA454","PHNXAZ051HW-MCDLAGGA455","PHNXAZ051HW-MCDLAGGA456","PHNXAZ051HW-MCDLAGGA457","PHNXAZ051HW-MCDLAGGA458","PHNXAZ051HW-MCDLAGGA459","PHNXAZ051HW-MCDLAGGA460"]
+  #- mnode: ["PHNXAZ051HW-MCDLAGGA451","PHNXAZ051HW-MCDLAGGA452","PHNXAZ051HW-MCDLAGGA453","PHNXAZ051HW-MCDLAGGA454","PHNXAZ051HW-MCDLAGGA455","PHNXAZ051HW-MCDLAGGA456","PHNXAZ051HW-MCDLAGGA457","PHNXAZ051HW-MCDLAGGA459","PHNXAZ051HW-MCDLAGGA460"]
+  - kafka_receive_valid: "Kafka_Receive_Validation"
+  - workflow: "NeighborDown"
+  - ticket: "State is not Full/PTP. So, create a ticket"
+  - noticket: "State is Full, No Ticket Required"
+tasks:
+  Read_Kafka_Message:
+    action: core.echo message=<% ctx(neighbordata) %>
+    next:
+      - when: <% succeeded() %>
+        publish:
+          - kafdata: <% result().stdout %>
+        do: Replace_spchars
+      - when: <% succeeded() and ctx(neighbordata) = '' %>
+        do: Verify_events
+  Verify_events:
+    action: core.echo message="There are no events in Kafka Topic"
+  Replace_spchars:
+    action: core.echo message="Replacing Special Characters"
+    next:
+      - when: <% succeeded() %>
+        publish:
+          - replace: "{{ ctx(\"kafdata\")|replace(\" u\", \"\")}}"
+        do: Fetch_Fields
+  Fetch_Fields:
+    action: core.echo message="Fetching Fields from Kafka Topic"
+    next:
+      - when: <% succeeded() %>
+        publish:
+          - nodeop: "{%set data = ctx(\"replace\") %}{% set elem_split = data.split(',')%}{% for value in elem_split %}{% if value.split(':')[0] == \"Node\" %}{% set node = value.split(':')[1] %}{{node}}{% endif %}{% endfor %}"
+          - smop: "{%set data = ctx(\"replace\") %}{% set elem_split = data.split(',')%}{% for value in elem_split %}{% if value.split(':')[0] == \"Summary\" %}{% set summary = value.split(':')[1]%}{{summary}}{% endif %}{% endfor %}"
+          - ssop: "{%set data = ctx(\"replace\") %}{% set elem_split = data.split(',')%}{% for value in elem_split %}{% if value.split(':')[0] == \"ServerSerial\" %}{% set serverserials = value.split(':')[1] %}{{serverserials}}{% endif %}{% endfor %}"
+          - fsop: "{%set data = ctx(\"replace\") %}{% set elem_split = data.split(',')%}{% for value in elem_split %}{% if value.split(':')[0] == \"FirstOccurrence\" %}{% set first_occurs = (value.split(':')[1] ~ \":\" ~ value.split(':')[2] ~ \":\" ~ value.split(':')[3]) %}{{first_occurs}}{% endif %}{% endfor %}"
+          - lsop: "{%set data = ctx(\"replace\") %}{% set elem_split = data.split(',')%}{% for value in elem_split %}{% if value.split(':')[0] == \"LastOccurrence\" %}{% set last_occurs = (value.split(':')[1] ~ \":\" ~ value.split(':')[2] ~ \":\" ~ value.split(':')[3]) %}{{last_occurs}}{% endif %}{% endfor %}"
+          - snop: "{%set data = ctx(\"replace\") %}{% set elem_split = data.split(',')%}{% for value in elem_split %}{% if value.split(':')[0] == \"ServerName\" %}{% set servernames = value.split(':')[1] %}{{servernames}}{% endif %}{% endfor %}"
+        do: Matching_Node
+  Matching_Node:
+    action: core.echo message="Matching the required Nodes"
+    next:
+      - when: <% succeeded() %>
+        publish:
+          #- match_node: "{% set mnodes = ctx(\"mnode\") %}{% for index in range(mnodes|length) %}{% if ctx(\"nodeop\") in mnodes[index]%}{{nodeop}}{% endif %}{% endfor %}"
+          - match_node: "{% if ctx(\"nodeop\") in ctx(\"mnode\")%}{{ctx(\"nodeop\")}}{% endif %}"
+        do: simulationop
+  simulationop:
+    action: core.remote hosts="192.168.3.136" username="root" password="access" cmd="/bin/sh /opt/ShowRouter_OSPF_Neighbor_Probe.sh <%ctx(match_node)%>"
+    next:
+      - when: <% succeeded() %>
+        publish:
+          - remoteop: <% result() %>
+        do: validate_state 
+      - when: <% failed() %>
+        do: DeviceFailed
+  DeviceFailed:
+    action: core.echo message="Unable to connect to the Device"
+  validate_state:
+    action: core.echo message="Matching the pattern"
+    next:
+      - when: <% succeeded() %>
+        publish:
+          - neighborstate: '<% regex_search(ctx(remoteop), "Full") %>' 
+        do: action_field
+  action_field:
+    action: core.echo message="validating action fields"
+    next:
+      - when: <% succeeded() %>
+        publish:
+          - customtext: "{% if ctx(\"neighborstate\") == true %}{{ctx(\"noticket\")}}{% else %}{{ctx(\"ticket\")}}{% endif %}"
+        do: write_kafka
+  write_kafka:
+    action: kafka.produce topic="netcoolwrtr" message='{"nodes":"<%ctx("nodeop")%>", "summary":"<%ctx("smop")%>", "firstoccurrence":"<%ctx("fsop")%>", "lastoccurrence":"<%ctx("lsop")%>", "serverserial":"<%ctx("ssop")%>", "servername":"<%ctx("snop")%>", "ImpactHandlingStatus":"<%ctx("kafka_receive_valid")%>", "customtext":"<%ctx("customtext")%>", "workflow":"<%ctx("workflow")%>"}'
+output:
+  - kafkadata: <% ctx(kafdata) %>
+  - replacedata: <% ctx(replace) %>
+  - nodes: <% ctx(nodeop)%>
+  - summary: <% ctx(smop)%>
+  - mnode: <% ctx(match_node)%>
+  - remoteop: <% ctx(remoteop)%>
+  - stdop: <% ctx(neighborstate)%>
+  - customtext: <% ctx(customtext)%>
