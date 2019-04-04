@@ -1,6 +1,6 @@
 ---
 name: OrquestaDiagnose
-pack: email
+pack: kafka
 description: Workflow for Diagnose Module
 runner_type: orquesta
 entry_point: workflows/OrquestaDiagnose.yaml
