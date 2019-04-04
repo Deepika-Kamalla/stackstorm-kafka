@@ -35,7 +35,7 @@ tasks:
       - when: <% succeeded() and PowerSupply in ctx(DiagnoseData) %>
         do: power_supply
   neighbor_down:
-    action: email.NeighborDown neighbordata=<%ctx(validata)%>
+    action: kafka.NeighborDown neighbordata=<%ctx(validata)%>
   #neighbor_down:
     #action: core.echo message="NeighborDown usecase" 
     #next:
