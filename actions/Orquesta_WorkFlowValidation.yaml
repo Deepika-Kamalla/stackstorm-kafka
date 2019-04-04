@@ -1,6 +1,6 @@
 ---
 name: Orquesta_WorkFlowValidation
-pack: email
+pack: kafka
 description: Workflow for Validation
 runner_type: orquesta
 entry_point: workflows/Orquesta_WorkFlowValidation.yaml
