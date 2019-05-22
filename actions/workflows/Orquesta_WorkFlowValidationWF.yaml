@@ -1,0 +1,53 @@
+version: 1.0
+
+description: Workflow for Diagnose Module with Orquesta Format
+
+input:
+  - validatedata
+tasks:
+  ValidateWorkflowResult:
+    #action: core.echo message="<%ctx("validatedata")%>"
+    action: core.echo message=<% ctx(validatedata) %>
+    next:
+      - when: <% succeeded() %>
+        publish: 
+          - validata: <% result().stdout %>
+        do: Replace_Chars
+  Replace_Chars:
+    action: core.echo message="Replacing unknown characters"
+    next:
+      - when: <% succeeded() %>
+        publish:
+          - replace: "{{ ctx(\"validata\")|replace(\" u'\", \"'\")|replace(\"u'DiagnosisResult\",\"'DiagnosisResult\") }}"
+        do: Diagnose_Result
+  Diagnose_Result:
+    action: core.echo message="Fetching the Diagnose Result field from the event"
+    next:
+      - when: <% succeeded() %>
+        publish:
+          - DiagnoseData: "{%set data = ctx(\"replace\") %}{% set elem_split = data.split(',')%}{% for value in elem_split %}{% if value.split(':')[0] == \"{'DiagnosisResult'\" %}{% set Dresult = value.split(':')[1] %}{{Dresult}}{% endif %}{% endfor %}"
+        do: final_value
+  final_value:
+    action: core.echo message="Final Value for running the workflow"
+    next:
+      - when: <% succeeded() and NeighborDown in ctx(DiagnoseData) %>
+        do: neighbor_down
+      - when: <% succeeded() and PowerSupply in ctx(DiagnoseData) %>
+        do: power_supply
+  neighbor_down:
+    action: kafka.NeighborDown neighbordata=<%ctx(validata)%>
+  #neighbor_down:
+    #action: core.echo message="NeighborDown usecase" 
+    #next:
+      #- publish:
+          #- data: <% result().stdout %>
+  power_supply:
+    action: core.echo message="Power_Supply usecase" 
+    next:
+      - publish:
+          - data: <% result().stdout %>
+output:
+  - outdata: <% ctx(validata)%>
+  - outdata1: <% ctx(replace)%>
+  - DiagnoseData: <% ctx(DiagnoseData)%>
+  #- echodata: <% ctx(data)%>
